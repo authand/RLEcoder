@@ -7,9 +7,7 @@ use std::error::Error;
 fn encode(path: &str) -> Result<(), Box<dyn Error>> {
     let file = File::open(path)?;
     let reader = BufReader::new(file);
-
     let mut bytes = reader.bytes().peekable();
-
     let stdout = io::stdout();
     let mut handle = stdout.lock();
  
@@ -34,23 +32,24 @@ fn encode(path: &str) -> Result<(), Box<dyn Error>> {
 }
 
 fn decode(path: &str) -> Result<(), Box<dyn Error>> {
-// for byte_result in bytes {
-//         let byte = byte_result?;
+    let file = File::open(path)?;
+    let mut reader = BufReader::new(file).bytes();
+    let stdout = io::stdout();
+    let mut handle = stdout.lock();
 
-//         if prev_byte == byte {
-//             count += 1
-//         } else {
-//             let repeated_bytes = vec![prev_byte; count];
-//             handle.write_all(&repeated_bytes)?;
+    while let Some(count_result) = reader.next() {
+        let count = count_result?;
 
-//             prev_byte = byte;
-//             count = 1;
-//         }
-//     }
+        let value = match reader.next() {
+            Some(b) => b?,
+            None => return Err("Unexpected EOF: no value after count".into()),
+        };
 
-//     let repeated_bytes = vec![prev_byte; count];
-//     handle.write_all(&repeated_bytes)?;
-//     handle.flush()?;
+        for _ in 0..count {
+            handle.write_all(&[value])?;
+        }
+    }
+    
     Ok(())
 }
 fn print_help() {
